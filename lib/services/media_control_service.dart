@@ -109,6 +109,24 @@ class MediaControlService {
     }
   }
 
+  /// Lowers the music stream volume so TTS is louder than music.
+  Future<void> duckAudio() async {
+    try {
+      await _methodChannel.invokeMethod('duckAudio');
+    } on PlatformException {
+      // Duck failed
+    }
+  }
+
+  /// Restores the music stream volume to the level before ducking.
+  Future<void> restoreAudio() async {
+    try {
+      await _methodChannel.invokeMethod('restoreAudio');
+    } on PlatformException {
+      // Restore failed
+    }
+  }
+
   /// Returns a stream of media events from the notification listener.
   Stream<Map<dynamic, dynamic>> get mediaEvents {
     return _eventChannel.receiveBroadcastStream().map(

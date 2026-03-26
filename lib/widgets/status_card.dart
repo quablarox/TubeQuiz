@@ -25,7 +25,7 @@ class StatusCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Quiz Status',
+                        'Status',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -79,6 +79,12 @@ class StatusCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
+                _buildStatChip(
+                  context,
+                  Icons.campaign,
+                  '${state.tracksAnnounced}',
+                  'Announced',
+                ),
                 _buildStatChip(
                   context,
                   Icons.play_circle_filled,

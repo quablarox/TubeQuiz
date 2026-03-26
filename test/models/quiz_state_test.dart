@@ -7,9 +7,15 @@ void main() {
       const state = QuizState();
       expect(state.status, QuizStatus.idle);
       expect(state.isServiceRunning, false);
+      expect(state.isQuizMode, false);
+      expect(state.isFullSong, false);
+      expect(state.useRandomStart, false);
+      expect(state.announceTiming, AnnounceTiming.beginning);
+      expect(state.announceIntervalSeconds, 5);
       expect(state.snippetDurationSeconds, 15);
       expect(state.tracksPlayed, 0);
       expect(state.tracksSkipped, 0);
+      expect(state.tracksAnnounced, 0);
     });
 
     test('copyWith creates modified copy', () {
@@ -18,11 +24,23 @@ void main() {
         status: QuizStatus.playingSnippet,
         snippetDurationSeconds: 30,
         tracksPlayed: 5,
+        isQuizMode: true,
+        isFullSong: true,
+        useRandomStart: true,
+        announceTiming: AnnounceTiming.interval,
+        announceIntervalSeconds: 10,
+        tracksAnnounced: 3,
       );
 
       expect(modified.status, QuizStatus.playingSnippet);
       expect(modified.snippetDurationSeconds, 30);
       expect(modified.tracksPlayed, 5);
+      expect(modified.isQuizMode, true);
+      expect(modified.isFullSong, true);
+      expect(modified.useRandomStart, true);
+      expect(modified.announceTiming, AnnounceTiming.interval);
+      expect(modified.announceIntervalSeconds, 10);
+      expect(modified.tracksAnnounced, 3);
       // Unchanged fields retain default values
       expect(modified.isServiceRunning, false);
       expect(modified.tracksSkipped, 0);
@@ -60,7 +78,12 @@ void main() {
       );
       expect(
         const QuizState(status: QuizStatus.waiting).statusLabel,
-        'Waiting for track...',
+        'Listening...',
+      );
+      expect(
+        const QuizState(status: QuizStatus.waiting, isQuizMode: true)
+            .statusLabel,
+        'Waiting for quiz track...',
       );
       expect(
         const QuizState(status: QuizStatus.announcing).statusLabel,
@@ -82,6 +105,23 @@ void main() {
         errorMessage: 'Test error',
       );
       expect(state.statusLabel, 'Error: Test error');
+    });
+  });
+
+  group('AnnounceTiming', () {
+    test('has all expected values', () {
+      expect(AnnounceTiming.values.length, 4);
+      expect(AnnounceTiming.values, contains(AnnounceTiming.beginning));
+      expect(AnnounceTiming.values, contains(AnnounceTiming.end));
+      expect(AnnounceTiming.values, contains(AnnounceTiming.both));
+      expect(AnnounceTiming.values, contains(AnnounceTiming.interval));
+    });
+
+    test('index values are stable for persistence', () {
+      expect(AnnounceTiming.beginning.index, 0);
+      expect(AnnounceTiming.end.index, 1);
+      expect(AnnounceTiming.both.index, 2);
+      expect(AnnounceTiming.interval.index, 3);
     });
   });
 }
