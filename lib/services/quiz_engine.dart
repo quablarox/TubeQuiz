@@ -21,7 +21,6 @@ class QuizEngine {
   bool _isRunning = false;
   String? _lastProcessedTitle;
   String? _currentTrackTitle;
-  int _lastAnnouncedPositionMs = 0;
   bool _hasAnnouncedEnd = false;
 
   /// Callback for state changes.
@@ -376,7 +375,6 @@ class QuizEngine {
     if (_state.announceTiming != AnnounceTiming.interval) return;
 
     final intervalMs = _state.announceIntervalSeconds * 1000;
-    _lastAnnouncedPositionMs = 0;
 
     _intervalAnnounceTimer = Timer.periodic(
       Duration(seconds: _state.announceIntervalSeconds),
@@ -400,8 +398,6 @@ class QuizEngine {
         if (durationMs > 0 && remainingMs < intervalMs) {
           return;
         }
-
-        _lastAnnouncedPositionMs = positionMs;
 
         final title = _state.currentTitle ?? current.title;
         final artist = _state.currentArtist ?? current.artist;
