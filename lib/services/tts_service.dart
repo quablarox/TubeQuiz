@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Service that handles Text-to-Speech announcements during the quiz.
@@ -29,21 +30,27 @@ class TtsService {
   Future<void> _speak(String text) async {
     if (_flutterTts == null) return;
 
-    final completer = Future<void>.delayed(Duration.zero);
-    bool completed = false;
+    final completer = Completer<void>();
 
     _flutterTts!.setCompletionHandler(() {
-      completed = true;
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    });
+
+    _flutterTts!.setErrorHandler((message) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
     });
 
     await _flutterTts!.speak(text);
 
     // Wait for TTS completion with timeout
-    int elapsed = 0;
-    while (!completed && elapsed < 10000) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      elapsed += 100;
-    }
+    await completer.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {},
+    );
   }
 
   /// Stops any ongoing TTS playback.

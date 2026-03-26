@@ -43,8 +43,8 @@ class QuizState {
 
   QuizState copyWith({
     QuizStatus? status,
-    String? currentTitle,
-    String? currentArtist,
+    String? Function()? currentTitle,
+    String? Function()? currentArtist,
     int? snippetDurationSeconds,
     bool? isServiceRunning,
     String? errorMessage,
@@ -53,8 +53,8 @@ class QuizState {
   }) {
     return QuizState(
       status: status ?? this.status,
-      currentTitle: currentTitle ?? this.currentTitle,
-      currentArtist: currentArtist ?? this.currentArtist,
+      currentTitle: currentTitle != null ? currentTitle() : this.currentTitle,
+      currentArtist: currentArtist != null ? currentArtist() : this.currentArtist,
       snippetDurationSeconds: snippetDurationSeconds ?? this.snippetDurationSeconds,
       isServiceRunning: isServiceRunning ?? this.isServiceRunning,
       errorMessage: errorMessage ?? this.errorMessage,

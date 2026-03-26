@@ -161,8 +161,8 @@ class QuizEngine {
     // Step 1: Announce via TTS
     _updateState(_state.copyWith(
       status: QuizStatus.announcing,
-      currentTitle: title,
-      currentArtist: artist,
+      currentTitle: () => title,
+      currentArtist: () => artist,
     ));
 
     await _ttsService.announceTrack(title, artist);
@@ -206,8 +206,8 @@ class QuizEngine {
 
         _updateState(_state.copyWith(
           status: QuizStatus.waiting,
-          currentTitle: null,
-          currentArtist: null,
+          currentTitle: () => null,
+          currentArtist: () => null,
         ));
 
         // Reset so we can process the next track

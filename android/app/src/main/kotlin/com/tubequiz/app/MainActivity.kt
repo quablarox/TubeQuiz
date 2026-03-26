@@ -34,9 +34,13 @@ class MainActivity : FlutterActivity() {
                         result.success(track)
                     }
                     "seekTo" -> {
-                        val position = call.argument<Long>("position") ?: 0L
-                        seekTo(position)
-                        result.success(true)
+                        val position = call.argument<Long>("position")
+                        if (position == null) {
+                            result.error("INVALID_ARGUMENT", "position argument is required", null)
+                        } else {
+                            seekTo(position)
+                            result.success(true)
+                        }
                     }
                     "skipToNext" -> {
                         skipToNext()

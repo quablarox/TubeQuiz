@@ -28,6 +28,31 @@ void main() {
       expect(modified.tracksSkipped, 0);
     });
 
+    test('copyWith can explicitly set nullable fields to null', () {
+      const state = QuizState(
+        currentTitle: 'Test Title',
+        currentArtist: 'Test Artist',
+      );
+      final modified = state.copyWith(
+        currentTitle: () => null,
+        currentArtist: () => null,
+      );
+
+      expect(modified.currentTitle, isNull);
+      expect(modified.currentArtist, isNull);
+    });
+
+    test('copyWith can update nullable fields', () {
+      const state = QuizState();
+      final modified = state.copyWith(
+        currentTitle: () => 'New Title',
+        currentArtist: () => 'New Artist',
+      );
+
+      expect(modified.currentTitle, 'New Title');
+      expect(modified.currentArtist, 'New Artist');
+    });
+
     test('statusLabel returns correct labels', () {
       expect(
         const QuizState(status: QuizStatus.idle).statusLabel,
