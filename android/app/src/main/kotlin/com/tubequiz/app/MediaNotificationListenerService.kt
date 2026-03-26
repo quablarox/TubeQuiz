@@ -15,7 +15,7 @@ class MediaNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        if (sbn?.packageName in SUPPORTED_MUSIC_PACKAGES) {
+        if (sbn != null && sbn.packageName in SUPPORTED_MUSIC_PACKAGES) {
             val extras = sbn.notification.extras
             val title = extras.getString("android.title", "")
             val artist = extras.getString("android.text", "")
@@ -31,10 +31,10 @@ class MediaNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        if (sbn?.packageName in SUPPORTED_MUSIC_PACKAGES) {
+        if (sbn != null && sbn.packageName in SUPPORTED_MUSIC_PACKAGES) {
             eventSink?.success(mapOf(
                 "event" to "trackRemoved",
-                "packageName" to sbn?.packageName
+                "packageName" to sbn.packageName
             ))
         }
     }
