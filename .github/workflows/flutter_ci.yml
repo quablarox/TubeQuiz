@@ -2,14 +2,12 @@ name: Flutter CI/CD
 
 on:
   push:
-    branches: [main, copilot/**]
+    branches: [main]
   pull_request:
     branches: [main]
 
-# Cancel duplicate runs: on a PR branch, the pull_request event cancels any
-# in-progress push run so only one workflow executes per commit.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
