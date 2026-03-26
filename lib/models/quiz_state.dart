@@ -13,6 +13,18 @@ enum AnnounceTiming {
   interval,
 }
 
+/// Controls when audio ducking (lowering music volume) is applied.
+enum DuckMode {
+  /// Never duck audio during announcements.
+  off,
+
+  /// Duck audio only for the first and last announcements of a track.
+  firstLast,
+
+  /// Duck audio for every announcement.
+  all,
+}
+
 /// Represents the current state of the engine.
 enum QuizStatus {
   /// Service is not running.
@@ -46,6 +58,7 @@ class QuizState {
   final bool useRandomStart;
   final AnnounceTiming announceTiming;
   final int announceIntervalSeconds;
+  final DuckMode duckMode;
   final String? errorMessage;
   final int tracksPlayed;
   final int tracksSkipped;
@@ -62,6 +75,7 @@ class QuizState {
     this.useRandomStart = false,
     this.announceTiming = AnnounceTiming.beginning,
     this.announceIntervalSeconds = 5,
+    this.duckMode = DuckMode.all,
     this.errorMessage,
     this.tracksPlayed = 0,
     this.tracksSkipped = 0,
@@ -79,6 +93,7 @@ class QuizState {
     bool? useRandomStart,
     AnnounceTiming? announceTiming,
     int? announceIntervalSeconds,
+    DuckMode? duckMode,
     String? errorMessage,
     int? tracksPlayed,
     int? tracksSkipped,
@@ -98,6 +113,7 @@ class QuizState {
       announceTiming: announceTiming ?? this.announceTiming,
       announceIntervalSeconds:
           announceIntervalSeconds ?? this.announceIntervalSeconds,
+      duckMode: duckMode ?? this.duckMode,
       errorMessage: errorMessage ?? this.errorMessage,
       tracksPlayed: tracksPlayed ?? this.tracksPlayed,
       tracksSkipped: tracksSkipped ?? this.tracksSkipped,

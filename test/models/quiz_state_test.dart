@@ -13,6 +13,7 @@ void main() {
       expect(state.announceTiming, AnnounceTiming.beginning);
       expect(state.announceIntervalSeconds, 5);
       expect(state.snippetDurationSeconds, 15);
+      expect(state.duckMode, DuckMode.all);
       expect(state.tracksPlayed, 0);
       expect(state.tracksSkipped, 0);
       expect(state.tracksAnnounced, 0);
@@ -29,6 +30,7 @@ void main() {
         useRandomStart: true,
         announceTiming: AnnounceTiming.interval,
         announceIntervalSeconds: 10,
+        duckMode: DuckMode.firstLast,
         tracksAnnounced: 3,
       );
 
@@ -40,6 +42,7 @@ void main() {
       expect(modified.useRandomStart, true);
       expect(modified.announceTiming, AnnounceTiming.interval);
       expect(modified.announceIntervalSeconds, 10);
+      expect(modified.duckMode, DuckMode.firstLast);
       expect(modified.tracksAnnounced, 3);
       // Unchanged fields retain default values
       expect(modified.isServiceRunning, false);
@@ -122,6 +125,21 @@ void main() {
       expect(AnnounceTiming.end.index, 1);
       expect(AnnounceTiming.both.index, 2);
       expect(AnnounceTiming.interval.index, 3);
+    });
+  });
+
+  group('DuckMode', () {
+    test('has all expected values', () {
+      expect(DuckMode.values.length, 3);
+      expect(DuckMode.values, contains(DuckMode.off));
+      expect(DuckMode.values, contains(DuckMode.firstLast));
+      expect(DuckMode.values, contains(DuckMode.all));
+    });
+
+    test('index values are stable for persistence', () {
+      expect(DuckMode.off.index, 0);
+      expect(DuckMode.firstLast.index, 1);
+      expect(DuckMode.all.index, 2);
     });
   });
 }

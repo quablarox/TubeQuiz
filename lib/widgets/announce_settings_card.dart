@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 
-/// Widget that provides controls for announcement timing settings.
+/// Widget that provides controls for announcement timing and duck mode settings.
 class AnnounceSettingsCard extends StatefulWidget {
   final AnnounceTiming timing;
   final int intervalSeconds;
+  final DuckMode duckMode;
   final ValueChanged<AnnounceTiming> onTimingChanged;
   final ValueChanged<int> onIntervalChanged;
+  final ValueChanged<DuckMode> onDuckModeChanged;
 
   const AnnounceSettingsCard({
     super.key,
     required this.timing,
     required this.intervalSeconds,
+    required this.duckMode,
     required this.onTimingChanged,
     required this.onIntervalChanged,
+    required this.onDuckModeChanged,
   });
 
   @override
@@ -130,6 +134,47 @@ class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
                 ],
               ),
             ],
+            const SizedBox(height: 16),
+            Text(
+              'Audio Ducking',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Lower music volume during announcements',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<DuckMode>(
+              segments: const [
+                ButtonSegment(
+                  value: DuckMode.off,
+                  label: Text('Off'),
+                  icon: Icon(Icons.volume_up, size: 18),
+                ),
+                ButtonSegment(
+                  value: DuckMode.firstLast,
+                  label: Text('First/Last'),
+                  icon: Icon(Icons.volume_down, size: 18),
+                ),
+                ButtonSegment(
+                  value: DuckMode.all,
+                  label: Text('All'),
+                  icon: Icon(Icons.volume_mute, size: 18),
+                ),
+              ],
+              selected: {widget.duckMode},
+              onSelectionChanged: (set) => widget.onDuckModeChanged(set.first),
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                textStyle: WidgetStatePropertyAll(
+                  Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ),
           ],
         ),
       ),

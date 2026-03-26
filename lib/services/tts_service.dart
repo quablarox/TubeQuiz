@@ -22,7 +22,7 @@ class TtsService {
   /// Returns a Future that completes when the announcement is finished.
   Future<void> announceTrack(String title, String artist) async {
     await initialize();
-    final text = 'Next song: $title by $artist';
+    final text = '$title by $artist';
     await _speak(text);
   }
 

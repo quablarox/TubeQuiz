@@ -79,8 +79,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 AnnounceSettingsCard(
                   timing: provider.announceTiming,
                   intervalSeconds: provider.announceInterval,
+                  duckMode: provider.duckMode,
                   onTimingChanged: (t) => provider.setAnnounceTiming(t),
                   onIntervalChanged: (s) => provider.setAnnounceInterval(s),
+                  onDuckModeChanged: (m) => provider.setDuckMode(m),
                 ),
 
                 const SizedBox(height: 16),
