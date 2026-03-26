@@ -70,6 +70,11 @@ class QuizEngine {
     _updateState(_state.copyWith(useRandomStart: enabled));
   }
 
+  /// Sets the audio ducking mode.
+  void setDuckMode(DuckMode mode) {
+    _updateState(_state.copyWith(duckMode: mode));
+  }
+
   /// Sets the announcement timing mode.
   void setAnnounceTiming(AnnounceTiming timing) {
     _updateState(_state.copyWith(announceTiming: timing));
@@ -401,19 +406,27 @@ class QuizEngine {
 
         final title = _state.currentTitle ?? current.title;
         final artist = _state.currentArtist ?? current.artist;
-        await _announce(title, artist);
+        await _announce(title, artist, isInterval: true);
       },
     );
   }
 
-  /// Announces a track via TTS with audio ducking.
-  Future<void> _announce(String title, String artist) async {
+  /// Announces a track via TTS with optional audio ducking.
+  ///
+  /// When [isInterval] is true, this is a periodic interval announcement.
+  /// Ducking is applied based on [DuckMode]: always for [DuckMode.all],
+  /// only for non-interval announcements for [DuckMode.firstLast],
+  /// and never for [DuckMode.off].
+  Future<void> _announce(String title, String artist, {bool isInterval = false}) async {
     final prevStatus = _state.status;
     _updateState(_state.copyWith(status: QuizStatus.announcing));
 
-    await _mediaControl.duckAudio();
+    final shouldDuck = _state.duckMode == DuckMode.all ||
+        (_state.duckMode == DuckMode.firstLast && !isInterval);
+
+    if (shouldDuck) await _mediaControl.duckAudio();
     await _ttsService.announceTrack(title, artist);
-    await _mediaControl.restoreAudio();
+    if (shouldDuck) await _mediaControl.restoreAudio();
 
     _updateState(_state.copyWith(
       status: prevStatus == QuizStatus.announcing ? QuizStatus.waiting : prevStatus,

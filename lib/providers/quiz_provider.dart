@@ -33,6 +33,7 @@ class QuizProvider extends ChangeNotifier {
   bool get useRandomStart => _state.useRandomStart;
   AnnounceTiming get announceTiming => _state.announceTiming;
   int get announceInterval => _state.announceIntervalSeconds;
+  DuckMode get duckMode => _state.duckMode;
   bool get isNotificationListenerEnabled => _isNotificationListenerEnabled;
   int get snippetDuration => _state.snippetDurationSeconds;
 
@@ -96,6 +97,14 @@ class QuizProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the audio ducking mode.
+  Future<void> setDuckMode(DuckMode mode) async {
+    _engine.setDuckMode(mode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('duck_mode', mode.index);
+    notifyListeners();
+  }
+
   /// Imports a CSV playlist file.
   Future<bool> importPlaylist() async {
     final result = await _csvImport.importPlaylist();
@@ -141,10 +150,15 @@ class QuizProvider extends ChangeNotifier {
       final randomStart = prefs.getBool('random_start') ?? false;
       final timingIndex = prefs.getInt('announce_timing') ?? 0;
       final interval = prefs.getInt('announce_interval') ?? 5;
+      final duckIndex = prefs.getInt('duck_mode') ?? 2;
 
       final timing = timingIndex >= 0 && timingIndex < AnnounceTiming.values.length
           ? AnnounceTiming.values[timingIndex]
           : AnnounceTiming.beginning;
+
+      final duck = duckIndex >= 0 && duckIndex < DuckMode.values.length
+          ? DuckMode.values[duckIndex]
+          : DuckMode.all;
 
       _engine.setSnippetDuration(duration);
       _engine.setQuizMode(quizMode);
@@ -152,6 +166,7 @@ class QuizProvider extends ChangeNotifier {
       _engine.setRandomStart(randomStart);
       _engine.setAnnounceTiming(timing);
       _engine.setAnnounceInterval(interval);
+      _engine.setDuckMode(duck);
 
       _state = _state.copyWith(
         snippetDurationSeconds: duration,
@@ -160,6 +175,7 @@ class QuizProvider extends ChangeNotifier {
         useRandomStart: randomStart,
         announceTiming: timing,
         announceIntervalSeconds: interval,
+        duckMode: duck,
       );
     } catch (e) {
       // Use defaults if preferences unavailable
