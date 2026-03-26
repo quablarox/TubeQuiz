@@ -5,7 +5,9 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.EventChannel
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.os.Bundle
@@ -15,6 +17,7 @@ import android.view.KeyEvent
 class MainActivity : FlutterActivity() {
     private val methodChannelName = "com.tubequiz.app/media_control"
     private val eventChannelName = "com.tubequiz.app/media_events"
+    private var savedMusicVolume: Int? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -52,6 +55,14 @@ class MainActivity : FlutterActivity() {
                     }
                     "pause" -> {
                         pause()
+                        result.success(true)
+                    }
+                    "duckAudio" -> {
+                        duckAudio()
+                        result.success(true)
+                    }
+                    "restoreAudio" -> {
+                        restoreAudio()
                         result.success(true)
                     }
                     else -> result.notImplemented()
@@ -128,5 +139,23 @@ class MainActivity : FlutterActivity() {
     private fun pause() {
         val controller = getYouTubeMusicController()
         controller?.transportControls?.pause()
+    }
+
+    private fun duckAudio() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        savedMusicVolume = currentVolume
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val duckedVolume = (maxVolume * 0.2).toInt().coerceAtLeast(1)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, duckedVolume, 0)
+    }
+
+    private fun restoreAudio() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val volume = savedMusicVolume
+        if (volume != null) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
+            savedMusicVolume = null
+        }
     }
 }

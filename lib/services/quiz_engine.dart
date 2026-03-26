@@ -5,13 +5,11 @@ import 'media_control_service.dart';
 import 'fuzzy_match_service.dart';
 import 'tts_service.dart';
 
-/// The core Quiz Loop engine that orchestrates the entire quiz behavior.
+/// The core engine that orchestrates passive tracking and quiz behavior.
 ///
-/// When Quiz Mode is active and music is playing in YouTube Music:
-/// 1. Detect & Match: Read current track metadata, check against playlist
-/// 2. Quiz Action (match or no CSV): Announce via TTS, jump to random timestamp,
-///    play for snippet duration, then skip
-/// 3. Skip Action (CSV loaded, no match): Skip immediately
+/// Always runs in passive mode: detects tracks and announces them via TTS.
+/// When quiz mode is enabled, additionally controls playback (playlist
+/// filtering, snippet duration, seeking, and skipping).
 class QuizEngine {
   final MediaControlService _mediaControl;
   final FuzzyMatchService _fuzzyMatch;
@@ -19,14 +17,21 @@ class QuizEngine {
 
   Timer? _pollTimer;
   Timer? _snippetTimer;
+  Timer? _intervalAnnounceTimer;
   bool _isRunning = false;
   String? _lastProcessedTitle;
+  String? _currentTrackTitle;
+  int _lastAnnouncedPositionMs = 0;
+  bool _hasAnnouncedEnd = false;
 
   /// Callback for state changes.
   void Function(QuizState state)? onStateChanged;
 
   QuizState _state = const QuizState();
   Playlist _playlist = Playlist.empty();
+
+  /// Maximum random start position in milliseconds (1:30).
+  static const int _maxRandomStartMs = 90000;
 
   QuizEngine({
     MediaControlService? mediaControl,
@@ -51,13 +56,40 @@ class QuizEngine {
     _updateState(_state.copyWith(snippetDurationSeconds: seconds));
   }
 
-  /// Starts the quiz loop.
+  /// Enables or disables quiz mode overlay.
+  void setQuizMode(bool enabled) {
+    _updateState(_state.copyWith(isQuizMode: enabled));
+  }
+
+  /// Sets whether to play the full song in quiz mode.
+  void setFullSong(bool enabled) {
+    _updateState(_state.copyWith(isFullSong: enabled));
+  }
+
+  /// Sets whether to use a random start position.
+  void setRandomStart(bool enabled) {
+    _updateState(_state.copyWith(useRandomStart: enabled));
+  }
+
+  /// Sets the announcement timing mode.
+  void setAnnounceTiming(AnnounceTiming timing) {
+    _updateState(_state.copyWith(announceTiming: timing));
+  }
+
+  /// Sets the interval for periodic announcements (in seconds).
+  void setAnnounceInterval(int seconds) {
+    _updateState(_state.copyWith(announceIntervalSeconds: seconds));
+  }
+
+  /// Starts the engine (passive tracking + optional quiz).
   Future<void> start() async {
     if (_isRunning) return;
 
     await _ttsService.initialize();
     _isRunning = true;
     _lastProcessedTitle = null;
+    _currentTrackTitle = null;
+    _hasAnnouncedEnd = false;
 
     _updateState(_state.copyWith(
       status: QuizStatus.waiting,
@@ -72,16 +104,20 @@ class QuizEngine {
     );
   }
 
-  /// Stops the quiz loop.
+  /// Stops the engine.
   Future<void> stop() async {
     _isRunning = false;
     _pollTimer?.cancel();
     _snippetTimer?.cancel();
+    _intervalAnnounceTimer?.cancel();
     _pollTimer = null;
     _snippetTimer = null;
+    _intervalAnnounceTimer = null;
     _lastProcessedTitle = null;
+    _currentTrackTitle = null;
 
     await _ttsService.stop();
+    await _mediaControl.restoreAudio();
 
     _updateState(const QuizState(
       status: QuizStatus.idle,
@@ -89,14 +125,18 @@ class QuizEngine {
     ));
   }
 
-  /// Core polling logic: checks what's playing and applies quiz rules.
+  /// Core polling logic: checks what's playing and applies rules.
   Future<void> _pollCurrentTrack() async {
     if (!_isRunning) return;
 
-    // Don't poll while announcing or playing snippet
+    // Don't poll while announcing or in an active quiz action
     if (_state.status == QuizStatus.announcing ||
-        _state.status == QuizStatus.playingSnippet ||
         _state.status == QuizStatus.skipping) {
+      return;
+    }
+
+    // In quiz mode with snippet playing, don't process new tracks
+    if (_state.isQuizMode && _state.status == QuizStatus.playingSnippet) {
       return;
     }
 
@@ -107,13 +147,18 @@ class QuizEngine {
         return;
       }
 
-      // Skip if we already processed this track
-      if (trackInfo.title == _lastProcessedTitle) {
+      // Check if this is a new track
+      if (trackInfo.title != _lastProcessedTitle) {
+        _lastProcessedTitle = trackInfo.title;
+        _currentTrackTitle = trackInfo.title;
+        _hasAnnouncedEnd = false;
+        _intervalAnnounceTimer?.cancel();
+        await _processNewTrack(trackInfo);
         return;
       }
 
-      _lastProcessedTitle = trackInfo.title;
-      await _processTrack(trackInfo);
+      // For existing track: handle end-of-song and interval announcements
+      await _handleOngoingAnnouncements(trackInfo);
     } catch (e) {
       _updateState(_state.copyWith(
         status: QuizStatus.error,
@@ -122,14 +167,44 @@ class QuizEngine {
     }
   }
 
-  /// Processes a detected track according to quiz rules.
-  Future<void> _processTrack(MediaTrackInfo trackInfo) async {
+  /// Processes a newly detected track.
+  Future<void> _processNewTrack(MediaTrackInfo trackInfo) async {
+    if (!_isRunning) return;
+
+    if (_state.isQuizMode) {
+      await _processQuizTrack(trackInfo);
+    } else {
+      await _processPassiveTrack(trackInfo);
+    }
+  }
+
+  /// Passive mode: announce the track and let it play.
+  Future<void> _processPassiveTrack(MediaTrackInfo trackInfo) async {
+    if (!_isRunning) return;
+
+    _updateState(_state.copyWith(
+      currentTitle: () => trackInfo.title,
+      currentArtist: () => trackInfo.artist,
+    ));
+
+    // Announce at beginning if configured
+    if (_shouldAnnounceAtBeginning()) {
+      await _announce(trackInfo.title, trackInfo.artist);
+    }
+
+    // Start interval timer if configured
+    _startIntervalAnnouncements(trackInfo);
+
+    _updateState(_state.copyWith(status: QuizStatus.waiting));
+  }
+
+  /// Quiz mode: match against playlist, then either skip or run quiz action.
+  Future<void> _processQuizTrack(MediaTrackInfo trackInfo) async {
     if (!_isRunning) return;
 
     final hasPlaylist = _playlist.isNotEmpty;
 
     if (hasPlaylist) {
-      // Check if the current track matches the playlist
       final match = _fuzzyMatch.findMatch(
         trackInfo.title,
         trackInfo.artist,
@@ -142,10 +217,8 @@ class QuizEngine {
         return;
       }
 
-      // Match found: run quiz action
       await _runQuizAction(trackInfo, match.title, match.artist);
     } else {
-      // No CSV loaded: treat every track as a quiz track
       await _runQuizAction(trackInfo, trackInfo.title, trackInfo.artist);
     }
   }
@@ -158,65 +231,201 @@ class QuizEngine {
   ) async {
     if (!_isRunning) return;
 
-    // Step 1: Announce via TTS
-    _updateState(_state.copyWith(
-      status: QuizStatus.announcing,
-      currentTitle: () => title,
-      currentArtist: () => artist,
-    ));
+    // Announce at beginning if configured
+    if (_shouldAnnounceAtBeginning()) {
+      _updateState(_state.copyWith(
+        status: QuizStatus.announcing,
+        currentTitle: () => title,
+        currentArtist: () => artist,
+      ));
 
-    await _ttsService.announceTrack(title, artist);
+      await _announce(title, artist);
 
-    if (!_isRunning) return;
-
-    // Step 2: Seek to random position
-    final snippetMs = _state.snippetDurationSeconds * 1000;
-    final trackDurationMs = trackInfo.durationMs;
-
-    if (trackDurationMs > 0) {
-      // Ensure enough time remains for the snippet
-      final maxStartMs = trackDurationMs - snippetMs;
-      if (maxStartMs > 0) {
-        final random = Random();
-        final randomStartMs = random.nextInt(maxStartMs);
-        await _mediaControl.seekTo(randomStartMs);
-      }
+      if (!_isRunning) return;
+    } else {
+      _updateState(_state.copyWith(
+        currentTitle: () => title,
+        currentArtist: () => artist,
+      ));
     }
 
-    // Step 3: Play snippet for the configured duration
-    _updateState(_state.copyWith(
-      status: QuizStatus.playingSnippet,
-    ));
+    if (_state.isFullSong) {
+      // Full song mode: let it play, just track it
+      _updateState(_state.copyWith(status: QuizStatus.playingSnippet));
+      await _mediaControl.play();
 
-    await _mediaControl.play();
+      // Start interval announcements if configured
+      _startIntervalAnnouncements(trackInfo);
 
-    // Wait for snippet duration, then skip
-    _snippetTimer?.cancel();
-    _snippetTimer = Timer(
-      Duration(seconds: _state.snippetDurationSeconds),
-      () async {
-        if (!_isRunning) return;
+      // In full song mode, we wait for the track to change naturally.
+      // The poll loop will detect the change and process the next track.
+      // Use a timer to check periodically if the song ended.
+      _snippetTimer?.cancel();
+      _snippetTimer = Timer.periodic(
+        const Duration(seconds: 2),
+        (_) async {
+          if (!_isRunning || !_state.isQuizMode) {
+            _snippetTimer?.cancel();
+            return;
+          }
 
-        _updateState(_state.copyWith(
-          tracksPlayed: _state.tracksPlayed + 1,
-        ));
+          final current = await _mediaControl.getCurrentTrack();
+          if (current == null ||
+              current.title != _currentTrackTitle ||
+              !current.isPlaying) {
+            _snippetTimer?.cancel();
+            _intervalAnnounceTimer?.cancel();
 
-        // Step 4: Skip to next track
-        await _mediaControl.skipToNext();
+            _updateState(_state.copyWith(
+              tracksPlayed: _state.tracksPlayed + 1,
+              status: QuizStatus.waiting,
+              currentTitle: () => null,
+              currentArtist: () => null,
+            ));
 
-        _updateState(_state.copyWith(
-          status: QuizStatus.waiting,
-          currentTitle: () => null,
-          currentArtist: () => null,
-        ));
+            _lastProcessedTitle = null;
+          }
+        },
+      );
+    } else {
+      // Snippet mode: seek and play for configured duration
+      final snippetMs = _state.snippetDurationSeconds * 1000;
+      final trackDurationMs = trackInfo.durationMs;
 
-        // Reset so we can process the next track
-        _lastProcessedTitle = null;
+      if (trackDurationMs > 0 && _state.useRandomStart) {
+        // Random start: cap at 1:30min - snippet length
+        final maxRandomMs = _maxRandomStartMs - snippetMs;
+        final maxStartMs = trackDurationMs - snippetMs;
+        final effectiveMax =
+            maxStartMs > 0 ? min(maxStartMs, max(0, maxRandomMs)) : 0;
+        if (effectiveMax > 0) {
+          final random = Random();
+          final randomStartMs = random.nextInt(effectiveMax);
+          await _mediaControl.seekTo(randomStartMs);
+        }
+      } else if (trackDurationMs > 0 && !_state.useRandomStart) {
+        // No random start: play from beginning
+        await _mediaControl.seekTo(0);
+      }
+
+      _updateState(_state.copyWith(status: QuizStatus.playingSnippet));
+      await _mediaControl.play();
+
+      // Start interval announcements if configured
+      _startIntervalAnnouncements(trackInfo);
+
+      // Wait for snippet duration, then skip
+      _snippetTimer?.cancel();
+      _snippetTimer = Timer(
+        Duration(seconds: _state.snippetDurationSeconds),
+        () async {
+          if (!_isRunning) return;
+
+          _intervalAnnounceTimer?.cancel();
+
+          // Announce at end if configured
+          if (_shouldAnnounceAtEnd() && !_hasAnnouncedEnd) {
+            _hasAnnouncedEnd = true;
+            await _announce(title, artist);
+          }
+
+          _updateState(_state.copyWith(
+            tracksPlayed: _state.tracksPlayed + 1,
+          ));
+
+          // Skip to next track
+          await _mediaControl.skipToNext();
+
+          _updateState(_state.copyWith(
+            status: QuizStatus.waiting,
+            currentTitle: () => null,
+            currentArtist: () => null,
+          ));
+
+          _lastProcessedTitle = null;
+        },
+      );
+    }
+  }
+
+  /// Handles ongoing announcements for the current track (end, interval).
+  Future<void> _handleOngoingAnnouncements(MediaTrackInfo trackInfo) async {
+    if (!_isRunning) return;
+
+    // Handle end-of-song announcement in passive mode
+    if (!_state.isQuizMode && _shouldAnnounceAtEnd() && !_hasAnnouncedEnd) {
+      final durationMs = trackInfo.durationMs;
+      final positionMs = trackInfo.positionMs;
+      // Announce ~5 seconds before the end
+      if (durationMs > 0 && positionMs > 0) {
+        final remainingMs = durationMs - positionMs;
+        if (remainingMs <= 5000 && remainingMs >= 0) {
+          _hasAnnouncedEnd = true;
+          final title = _state.currentTitle ?? trackInfo.title;
+          final artist = _state.currentArtist ?? trackInfo.artist;
+          await _announce(title, artist);
+        }
+      }
+    }
+  }
+
+  /// Starts periodic interval announcements if configured.
+  void _startIntervalAnnouncements(MediaTrackInfo trackInfo) {
+    _intervalAnnounceTimer?.cancel();
+
+    if (_state.announceTiming != AnnounceTiming.interval) return;
+
+    final intervalMs = _state.announceIntervalSeconds * 1000;
+    _lastAnnouncedPositionMs = 0;
+
+    _intervalAnnounceTimer = Timer.periodic(
+      Duration(seconds: _state.announceIntervalSeconds),
+      (_) async {
+        if (!_isRunning) {
+          _intervalAnnounceTimer?.cancel();
+          return;
+        }
+
+        final current = await _mediaControl.getCurrentTrack();
+        if (current == null || current.title != _currentTrackTitle) {
+          _intervalAnnounceTimer?.cancel();
+          return;
+        }
+
+        final durationMs = current.durationMs;
+        final positionMs = current.positionMs;
+        final remainingMs = durationMs - positionMs;
+
+        // Skip if remaining time is less than the interval
+        if (durationMs > 0 && remainingMs < intervalMs) {
+          return;
+        }
+
+        _lastAnnouncedPositionMs = positionMs;
+
+        final title = _state.currentTitle ?? current.title;
+        final artist = _state.currentArtist ?? current.artist;
+        await _announce(title, artist);
       },
     );
   }
 
-  /// Skips a non-matching track immediately.
+  /// Announces a track via TTS with audio ducking.
+  Future<void> _announce(String title, String artist) async {
+    final prevStatus = _state.status;
+    _updateState(_state.copyWith(status: QuizStatus.announcing));
+
+    await _mediaControl.duckAudio();
+    await _ttsService.announceTrack(title, artist);
+    await _mediaControl.restoreAudio();
+
+    _updateState(_state.copyWith(
+      status: prevStatus == QuizStatus.announcing ? QuizStatus.waiting : prevStatus,
+      tracksAnnounced: _state.tracksAnnounced + 1,
+    ));
+  }
+
+  /// Skips a non-matching track immediately (quiz mode).
   Future<void> _skipTrack() async {
     _updateState(_state.copyWith(status: QuizStatus.skipping));
 
@@ -227,8 +436,21 @@ class QuizEngine {
       tracksSkipped: _state.tracksSkipped + 1,
     ));
 
-    // Reset so we can process the next track
     _lastProcessedTitle = null;
+  }
+
+  bool _shouldAnnounceAtBeginning() {
+    final timing = _state.announceTiming;
+    return timing == AnnounceTiming.beginning ||
+        timing == AnnounceTiming.both ||
+        timing == AnnounceTiming.interval;
+  }
+
+  bool _shouldAnnounceAtEnd() {
+    final timing = _state.announceTiming;
+    return timing == AnnounceTiming.end ||
+        timing == AnnounceTiming.both ||
+        timing == AnnounceTiming.interval;
   }
 
   void _updateState(QuizState newState) {

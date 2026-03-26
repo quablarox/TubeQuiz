@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../services/services.dart';
 
-/// Provider that manages the quiz state and exposes it to the UI.
+/// Provider that manages the app state and exposes it to the UI.
 class QuizProvider extends ChangeNotifier {
   final QuizEngine _engine;
   final CsvImportService _csvImport;
@@ -27,12 +27,17 @@ class QuizProvider extends ChangeNotifier {
   // Getters
   QuizState get state => _state;
   Playlist get playlist => _playlist;
-  bool get isQuizActive => _state.isServiceRunning;
+  bool get isServiceRunning => _state.isServiceRunning;
+  bool get isQuizMode => _state.isQuizMode;
+  bool get isFullSong => _state.isFullSong;
+  bool get useRandomStart => _state.useRandomStart;
+  AnnounceTiming get announceTiming => _state.announceTiming;
+  int get announceInterval => _state.announceIntervalSeconds;
   bool get isNotificationListenerEnabled => _isNotificationListenerEnabled;
   int get snippetDuration => _state.snippetDurationSeconds;
 
-  /// Toggles the quiz mode on/off.
-  Future<void> toggleQuizMode() async {
+  /// Toggles the tracking service on/off (passive mode).
+  Future<void> toggleService() async {
     if (_state.isServiceRunning) {
       await _engine.stop();
     } else {
@@ -40,11 +45,54 @@ class QuizProvider extends ChangeNotifier {
     }
   }
 
+  /// Toggles the quiz mode overlay on/off.
+  Future<void> toggleQuizMode() async {
+    final newValue = !_state.isQuizMode;
+    _engine.setQuizMode(newValue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('quiz_mode', newValue);
+    notifyListeners();
+  }
+
   /// Updates the snippet duration.
   Future<void> setSnippetDuration(int seconds) async {
     _engine.setSnippetDuration(seconds);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('snippet_duration', seconds);
+    notifyListeners();
+  }
+
+  /// Toggles full song mode.
+  Future<void> toggleFullSong() async {
+    final newValue = !_state.isFullSong;
+    _engine.setFullSong(newValue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('full_song', newValue);
+    notifyListeners();
+  }
+
+  /// Toggles random start position.
+  Future<void> toggleRandomStart() async {
+    final newValue = !_state.useRandomStart;
+    _engine.setRandomStart(newValue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('random_start', newValue);
+    notifyListeners();
+  }
+
+  /// Sets the announcement timing mode.
+  Future<void> setAnnounceTiming(AnnounceTiming timing) async {
+    _engine.setAnnounceTiming(timing);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('announce_timing', timing.index);
+    notifyListeners();
+  }
+
+  /// Sets the interval for periodic announcements.
+  Future<void> setAnnounceInterval(int seconds) async {
+    _engine.setAnnounceInterval(seconds);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('announce_interval', seconds);
     notifyListeners();
   }
 
@@ -88,8 +136,31 @@ class QuizProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final duration = prefs.getInt('snippet_duration') ?? 15;
+      final quizMode = prefs.getBool('quiz_mode') ?? false;
+      final fullSong = prefs.getBool('full_song') ?? false;
+      final randomStart = prefs.getBool('random_start') ?? false;
+      final timingIndex = prefs.getInt('announce_timing') ?? 0;
+      final interval = prefs.getInt('announce_interval') ?? 5;
+
+      final timing = timingIndex >= 0 && timingIndex < AnnounceTiming.values.length
+          ? AnnounceTiming.values[timingIndex]
+          : AnnounceTiming.beginning;
+
       _engine.setSnippetDuration(duration);
-      _state = _state.copyWith(snippetDurationSeconds: duration);
+      _engine.setQuizMode(quizMode);
+      _engine.setFullSong(fullSong);
+      _engine.setRandomStart(randomStart);
+      _engine.setAnnounceTiming(timing);
+      _engine.setAnnounceInterval(interval);
+
+      _state = _state.copyWith(
+        snippetDurationSeconds: duration,
+        isQuizMode: quizMode,
+        isFullSong: fullSong,
+        useRandomStart: randomStart,
+        announceTiming: timing,
+        announceIntervalSeconds: interval,
+      );
     } catch (e) {
       // Use defaults if preferences unavailable
     }

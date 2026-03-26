@@ -5,8 +5,8 @@ import '../widgets/widgets.dart';
 
 /// The main dashboard screen of the TubeQuiz app.
 ///
-/// Displays quiz status, controls for enabling/disabling quiz mode,
-/// snippet duration slider, playlist management, and service status.
+/// Displays service controls, announcement settings, quiz mode settings,
+/// and playlist management.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -46,7 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(Icons.quiz),
+            Icon(Icons.music_note),
             SizedBox(width: 8),
             Text('TubeQuiz'),
           ],
@@ -65,8 +65,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 if (!provider.isNotificationListenerEnabled)
                   _buildPermissionBanner(context, provider),
 
-                // Quiz Mode Toggle
-                _buildQuizToggle(context, provider),
+                // Service Toggle (Passive Tracking)
+                _buildServiceToggle(context, provider),
 
                 const SizedBox(height: 16),
 
@@ -75,11 +75,31 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                 const SizedBox(height: 16),
 
-                // Snippet Duration Slider
-                SnippetDurationSlider(
-                  value: provider.snippetDuration,
-                  onChanged: (value) => provider.setSnippetDuration(value),
+                // Announcement Settings
+                AnnounceSettingsCard(
+                  timing: provider.announceTiming,
+                  intervalSeconds: provider.announceInterval,
+                  onTimingChanged: (t) => provider.setAnnounceTiming(t),
+                  onIntervalChanged: (s) => provider.setAnnounceInterval(s),
                 ),
+
+                const SizedBox(height: 16),
+
+                // Quiz Mode Section
+                _buildQuizModeCard(context, provider),
+
+                // Playback settings (shown when quiz mode is on)
+                if (provider.isQuizMode) ...[
+                  const SizedBox(height: 16),
+                  SnippetDurationSlider(
+                    value: provider.snippetDuration,
+                    isFullSong: provider.isFullSong,
+                    useRandomStart: provider.useRandomStart,
+                    onChanged: (value) => provider.setSnippetDuration(value),
+                    onToggleFullSong: () => provider.toggleFullSong(),
+                    onToggleRandomStart: () => provider.toggleRandomStart(),
+                  ),
+                ],
 
                 const SizedBox(height: 16),
 
@@ -116,17 +136,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildQuizToggle(BuildContext context, QuizProvider provider) {
-    final isActive = provider.isQuizActive;
+  Widget _buildServiceToggle(BuildContext context, QuizProvider provider) {
+    final isRunning = provider.isServiceRunning;
 
     return Card(
       elevation: 2,
-      color: isActive
+      color: isRunning
           ? Theme.of(context).colorScheme.primaryContainer
           : null,
       child: InkWell(
         onTap: provider.isNotificationListenerEnabled
-            ? () => provider.toggleQuizMode()
+            ? () => provider.toggleService()
             : null,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -134,9 +154,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: Row(
             children: [
               Icon(
-                isActive ? Icons.stop_circle : Icons.play_circle,
+                isRunning ? Icons.hearing : Icons.hearing_disabled,
                 size: 48,
-                color: isActive
+                color: isRunning
                     ? Theme.of(context).colorScheme.primary
                     : provider.isNotificationListenerEnabled
                         ? Theme.of(context).colorScheme.primary
@@ -148,17 +168,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isActive ? 'Quiz Mode Active' : 'Start Quiz Mode',
+                      isRunning ? 'Tracking Active' : 'Start Tracking',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isActive
+                      isRunning
                           ? 'Monitoring YouTube Music...'
                           : provider.isNotificationListenerEnabled
-                              ? 'Tap to start the music quiz'
+                              ? 'Tap to start tracking songs'
                               : 'Grant notification access first',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -166,13 +186,62 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
               Switch(
-                value: isActive,
+                value: isRunning,
                 onChanged: provider.isNotificationListenerEnabled
-                    ? (_) => provider.toggleQuizMode()
+                    ? (_) => provider.toggleService()
                     : null,
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuizModeCard(BuildContext context, QuizProvider provider) {
+    final isQuiz = provider.isQuizMode;
+
+    return Card(
+      elevation: 2,
+      color: isQuiz
+          ? Theme.of(context).colorScheme.tertiaryContainer
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          children: [
+            Icon(
+              Icons.quiz,
+              size: 32,
+              color: isQuiz
+                  ? Theme.of(context).colorScheme.tertiary
+                  : Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quiz Mode',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  Text(
+                    isQuiz
+                        ? 'Controls playback with snippets & playlist'
+                        : 'Enable to control playback',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: isQuiz,
+              onChanged: (_) => provider.toggleQuizMode(),
+            ),
+          ],
         ),
       ),
     );
