@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-/// Represents metadata of the currently playing track in YouTube Music.
+/// Represents metadata of the currently playing track from a supported music app.
 class MediaTrackInfo {
   final String title;
   final String artist;
@@ -34,7 +34,8 @@ class MediaTrackInfo {
 }
 
 /// Service that communicates with the native Android platform
-/// to control YouTube Music playback via MediaSession API.
+/// to control music playback via MediaSession API.
+/// Supports YouTube Music, Amazon Music, and other compatible players.
 class MediaControlService {
   static const _methodChannel = MethodChannel('com.tubequiz.app/media_control');
   static const _eventChannel = EventChannel('com.tubequiz.app/media_events');
@@ -60,7 +61,7 @@ class MediaControlService {
     }
   }
 
-  /// Gets the currently playing track info from YouTube Music.
+  /// Gets the currently playing track info from a supported music app.
   Future<MediaTrackInfo?> getCurrentTrack() async {
     try {
       final result = await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
@@ -122,6 +123,24 @@ class MediaControlService {
   Future<void> restoreAudio() async {
     try {
       await _methodChannel.invokeMethod('restoreAudio');
+    } on PlatformException {
+      // Restore failed
+    }
+  }
+
+  /// Boosts the music stream volume to max for louder TTS output.
+  Future<void> boostTtsVolume() async {
+    try {
+      await _methodChannel.invokeMethod('boostTtsVolume');
+    } on PlatformException {
+      // Boost failed
+    }
+  }
+
+  /// Restores the music stream volume to the level before TTS boost.
+  Future<void> restoreTtsVolume() async {
+    try {
+      await _methodChannel.invokeMethod('restoreTtsVolume');
     } on PlatformException {
       // Restore failed
     }

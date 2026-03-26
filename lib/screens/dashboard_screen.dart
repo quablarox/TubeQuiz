@@ -124,7 +124,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.only(bottom: 16.0),
       child: MaterialBanner(
         content: const Text(
-          'Notification listener permission is required to read YouTube Music playback.',
+          'Notification listener permission is required to read music playback.',
         ),
         leading: const Icon(Icons.warning_amber, color: Colors.orange),
         actions: [
@@ -178,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 4),
                     Text(
                       isRunning
-                          ? 'Monitoring YouTube Music...'
+                          ? 'Monitoring music playback...'
                           : provider.isNotificationListenerEnabled
                               ? 'Tap to start tracking songs'
                               : 'Grant notification access first',

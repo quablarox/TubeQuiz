@@ -177,6 +177,7 @@ class QuizProvider extends ChangeNotifier {
         announceIntervalSeconds: interval,
         duckMode: duck,
       );
+      notifyListeners();
     } catch (e) {
       // Use defaults if preferences unavailable
     }

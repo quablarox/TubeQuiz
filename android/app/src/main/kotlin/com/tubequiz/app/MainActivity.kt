@@ -18,9 +18,14 @@ class MainActivity : FlutterActivity() {
     private val methodChannelName = "com.tubequiz.app/media_control"
     private val eventChannelName = "com.tubequiz.app/media_events"
     private var savedMusicVolume: Int? = null
+    private var preTtsVolume: Int? = null
 
     companion object {
         private const val DUCK_VOLUME_FRACTION = 0.2
+        private val SUPPORTED_MUSIC_PACKAGES = setOf(
+            "com.google.android.apps.youtube.music",
+            "com.amazon.mp3",
+        )
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -69,6 +74,14 @@ class MainActivity : FlutterActivity() {
                         restoreAudio()
                         result.success(true)
                     }
+                    "boostTtsVolume" -> {
+                        boostTtsVolume()
+                        result.success(true)
+                    }
+                    "restoreTtsVolume" -> {
+                        restoreTtsVolume()
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -98,13 +111,13 @@ class MainActivity : FlutterActivity() {
         startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
     }
 
-    private fun getYouTubeMusicController(): MediaController? {
+    private fun getMusicController(): MediaController? {
         try {
             val mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
             val component = ComponentName(this, MediaNotificationListenerService::class.java)
             val controllers = mediaSessionManager.getActiveSessions(component)
             return controllers.firstOrNull { controller ->
-                controller.packageName == "com.google.android.apps.youtube.music"
+                controller.packageName in SUPPORTED_MUSIC_PACKAGES
             }
         } catch (e: SecurityException) {
             return null
@@ -112,7 +125,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun getCurrentPlayingTrack(): Map<String, Any?>? {
-        val controller = getYouTubeMusicController() ?: return null
+        val controller = getMusicController() ?: return null
         val metadata = controller.metadata ?: return null
         val playbackState = controller.playbackState
 
@@ -126,22 +139,22 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun seekTo(position: Long) {
-        val controller = getYouTubeMusicController()
+        val controller = getMusicController()
         controller?.transportControls?.seekTo(position)
     }
 
     private fun skipToNext() {
-        val controller = getYouTubeMusicController()
+        val controller = getMusicController()
         controller?.transportControls?.skipToNext()
     }
 
     private fun play() {
-        val controller = getYouTubeMusicController()
+        val controller = getMusicController()
         controller?.transportControls?.play()
     }
 
     private fun pause() {
-        val controller = getYouTubeMusicController()
+        val controller = getMusicController()
         controller?.transportControls?.pause()
     }
 
@@ -160,6 +173,22 @@ class MainActivity : FlutterActivity() {
         if (volume != null) {
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
             savedMusicVolume = null
+        }
+    }
+
+    private fun boostTtsVolume() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        preTtsVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxVolume, 0)
+    }
+
+    private fun restoreTtsVolume() {
+        val volume = preTtsVolume
+        if (volume != null) {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
+            preTtsVolume = null
         }
     }
 }

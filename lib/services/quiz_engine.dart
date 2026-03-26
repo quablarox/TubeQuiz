@@ -123,9 +123,12 @@ class QuizEngine {
     await _ttsService.stop();
     await _mediaControl.restoreAudio();
 
-    _updateState(const QuizState(
+    _updateState(_state.copyWith(
       status: QuizStatus.idle,
       isServiceRunning: false,
+      currentTitle: () => null,
+      currentArtist: () => null,
+      errorMessage: null,
     ));
   }
 
@@ -425,7 +428,9 @@ class QuizEngine {
         (_state.duckMode == DuckMode.firstLast && !isInterval);
 
     if (shouldDuck) await _mediaControl.duckAudio();
+    await _mediaControl.boostTtsVolume();
     await _ttsService.announceTrack(title, artist);
+    await _mediaControl.restoreTtsVolume();
     if (shouldDuck) await _mediaControl.restoreAudio();
 
     _updateState(_state.copyWith(
