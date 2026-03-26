@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 
 /// Widget that provides controls for announcement timing settings.
-class AnnounceSettingsCard extends StatelessWidget {
+class AnnounceSettingsCard extends StatefulWidget {
   final AnnounceTiming timing;
   final int intervalSeconds;
   final ValueChanged<AnnounceTiming> onTimingChanged;
@@ -15,6 +15,34 @@ class AnnounceSettingsCard extends StatelessWidget {
     required this.onTimingChanged,
     required this.onIntervalChanged,
   });
+
+  @override
+  State<AnnounceSettingsCard> createState() => _AnnounceSettingsCardState();
+}
+
+class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
+  late TextEditingController _intervalController;
+
+  @override
+  void initState() {
+    super.initState();
+    _intervalController =
+        TextEditingController(text: '${widget.intervalSeconds}');
+  }
+
+  @override
+  void didUpdateWidget(AnnounceSettingsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.intervalSeconds != widget.intervalSeconds) {
+      _intervalController.text = '${widget.intervalSeconds}';
+    }
+  }
+
+  @override
+  void dispose() {
+    _intervalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +83,8 @@ class AnnounceSettingsCard extends StatelessWidget {
                   icon: Icon(Icons.repeat, size: 18),
                 ),
               ],
-              selected: {timing},
-              onSelectionChanged: (set) => onTimingChanged(set.first),
+              selected: {widget.timing},
+              onSelectionChanged: (set) => widget.onTimingChanged(set.first),
               showSelectedIcon: false,
               style: ButtonStyle(
                 visualDensity: VisualDensity.compact,
@@ -65,7 +93,7 @@ class AnnounceSettingsCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (timing == AnnounceTiming.interval) ...[
+            if (widget.timing == AnnounceTiming.interval) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -77,8 +105,7 @@ class AnnounceSettingsCard extends StatelessWidget {
                   SizedBox(
                     width: 64,
                     child: TextField(
-                      controller:
-                          TextEditingController(text: '$intervalSeconds'),
+                      controller: _intervalController,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       decoration: const InputDecoration(
@@ -90,7 +117,7 @@ class AnnounceSettingsCard extends StatelessWidget {
                       onSubmitted: (value) {
                         final parsed = int.tryParse(value);
                         if (parsed != null && parsed >= 1 && parsed <= 60) {
-                          onIntervalChanged(parsed);
+                          widget.onIntervalChanged(parsed);
                         }
                       },
                     ),

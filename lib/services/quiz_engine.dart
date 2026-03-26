@@ -394,8 +394,8 @@ class QuizEngine {
         final positionMs = current.positionMs;
         final remainingMs = durationMs - positionMs;
 
-        // Skip if remaining time is less than the interval
-        if (durationMs > 0 && remainingMs < intervalMs) {
+        // Skip if remaining time is less than or equal to the interval
+        if (durationMs > 0 && remainingMs <= intervalMs) {
           return;
         }
 

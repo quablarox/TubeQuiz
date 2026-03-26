@@ -19,6 +19,10 @@ class MainActivity : FlutterActivity() {
     private val eventChannelName = "com.tubequiz.app/media_events"
     private var savedMusicVolume: Int? = null
 
+    companion object {
+        private const val DUCK_VOLUME_FRACTION = 0.2
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -146,7 +150,7 @@ class MainActivity : FlutterActivity() {
         val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         savedMusicVolume = currentVolume
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val duckedVolume = (maxVolume * 0.2).toInt().coerceAtLeast(1)
+        val duckedVolume = (maxVolume * DUCK_VOLUME_FRACTION).toInt().coerceAtLeast(1)
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, duckedVolume, 0)
     }
 
