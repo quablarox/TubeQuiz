@@ -214,7 +214,7 @@ class MainActivity : FlutterActivity() {
         if (savedWasPlaying == true) {
             val controller = getMusicController()
             controller?.transportControls?.play()
-            savedWasPlaying = null
         }
+        savedWasPlaying = null
     }
 }
