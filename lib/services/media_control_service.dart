@@ -110,7 +110,7 @@ class MediaControlService {
     }
   }
 
-  /// Lowers the music stream volume so TTS is louder than music.
+  /// Requests AudioFocus so the music app lowers its own output during TTS.
   Future<void> duckAudio() async {
     try {
       await _methodChannel.invokeMethod('duckAudio');
@@ -119,7 +119,7 @@ class MediaControlService {
     }
   }
 
-  /// Restores the music stream volume to the level before ducking.
+  /// Abandons AudioFocus so the music app restores its output level.
   Future<void> restoreAudio() async {
     try {
       await _methodChannel.invokeMethod('restoreAudio');
@@ -128,21 +128,21 @@ class MediaControlService {
     }
   }
 
-  /// Boosts the music stream volume to max for louder TTS output.
-  Future<void> boostTtsVolume() async {
+  /// Pauses music and boosts STREAM_MUSIC to max for louder TTS.
+  Future<void> pauseForTts() async {
     try {
-      await _methodChannel.invokeMethod('boostTtsVolume');
+      await _methodChannel.invokeMethod('pauseForTts');
     } on PlatformException {
-      // Boost failed
+      // Pause for TTS failed
     }
   }
 
-  /// Restores the music stream volume to the level before TTS boost.
-  Future<void> restoreTtsVolume() async {
+  /// Restores STREAM_MUSIC volume and resumes music after TTS.
+  Future<void> resumeAfterTts() async {
     try {
-      await _methodChannel.invokeMethod('restoreTtsVolume');
+      await _methodChannel.invokeMethod('resumeAfterTts');
     } on PlatformException {
-      // Restore failed
+      // Resume after TTS failed
     }
   }
 

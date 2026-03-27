@@ -127,7 +127,7 @@ class AnnounceSettingsCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Lower music volume during announcements',
+              'Lower or pause music during announcements',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -147,6 +147,11 @@ class AnnounceSettingsCard extends StatelessWidget {
                   value: DuckMode.all,
                   label: Text('All'),
                   icon: Icon(Icons.volume_mute, size: 18),
+                ),
+                ButtonSegment(
+                  value: DuckMode.pause,
+                  label: Text('Pause'),
+                  icon: Icon(Icons.pause_circle_outline, size: 18),
                 ),
               ],
               selected: {duckMode},

@@ -13,16 +13,21 @@ enum AnnounceTiming {
   interval,
 }
 
-/// Controls when audio ducking (lowering music volume) is applied.
+/// Controls audio behavior during TTS announcements.
 enum DuckMode {
   /// Never duck audio during announcements.
   off,
 
   /// Duck audio only for the first and last announcements of a track.
+  /// Uses AudioFocus so the music app lowers its own output.
   firstLast,
 
   /// Duck audio for every announcement.
+  /// Uses AudioFocus so the music app lowers its own output.
   all,
+
+  /// Pause music and boost volume during every announcement.
+  pause,
 }
 
 /// Represents the current state of the engine.
