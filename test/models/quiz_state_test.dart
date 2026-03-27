@@ -130,16 +130,18 @@ void main() {
 
   group('DuckMode', () {
     test('has all expected values', () {
-      expect(DuckMode.values.length, 3);
+      expect(DuckMode.values.length, 4);
       expect(DuckMode.values, contains(DuckMode.off));
       expect(DuckMode.values, contains(DuckMode.firstLast));
       expect(DuckMode.values, contains(DuckMode.all));
+      expect(DuckMode.values, contains(DuckMode.pause));
     });
 
     test('index values are stable for persistence', () {
       expect(DuckMode.off.index, 0);
       expect(DuckMode.firstLast.index, 1);
       expect(DuckMode.all.index, 2);
+      expect(DuckMode.pause.index, 3);
     });
   });
 }

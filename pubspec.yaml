@@ -28,6 +28,9 @@ dependencies:
   # Shared preferences for settings persistence
   shared_preferences: ^2.2.2
 
+  # App version info
+  package_info_plus: ^8.3.0
+
   # Foreground service
   flutter_foreground_task: ^6.1.3
 

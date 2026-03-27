@@ -8,11 +8,14 @@ class MediaNotificationListenerService : NotificationListenerService() {
 
     companion object {
         var eventSink: EventChannel.EventSink? = null
-        private const val YOUTUBE_MUSIC_PACKAGE = "com.google.android.apps.youtube.music"
+        private val SUPPORTED_MUSIC_PACKAGES = setOf(
+            "com.google.android.apps.youtube.music",
+            "com.amazon.mp3",
+        )
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        if (sbn?.packageName == YOUTUBE_MUSIC_PACKAGE) {
+        if (sbn != null && sbn.packageName in SUPPORTED_MUSIC_PACKAGES) {
             val extras = sbn.notification.extras
             val title = extras.getString("android.title", "")
             val artist = extras.getString("android.text", "")
@@ -28,10 +31,10 @@ class MediaNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        if (sbn?.packageName == YOUTUBE_MUSIC_PACKAGE) {
+        if (sbn != null && sbn.packageName in SUPPORTED_MUSIC_PACKAGES) {
             eventSink?.success(mapOf(
                 "event" to "trackRemoved",
-                "packageName" to YOUTUBE_MUSIC_PACKAGE
+                "packageName" to sbn.packageName
             ))
         }
     }

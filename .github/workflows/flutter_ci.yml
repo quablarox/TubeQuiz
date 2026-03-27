@@ -77,5 +77,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: TubeQuiz-v${{ steps.version.outputs.name }}-apk
+          name: TubeQuiz-v${{ steps.version.outputs.full }}-apk
           path: build/app/outputs/flutter-apk/app-release.apk

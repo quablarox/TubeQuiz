@@ -122,10 +122,14 @@ class QuizEngine {
 
     await _ttsService.stop();
     await _mediaControl.restoreAudio();
+    await _mediaControl.resumeAfterTts();
 
-    _updateState(const QuizState(
+    _updateState(_state.copyWith(
       status: QuizStatus.idle,
       isServiceRunning: false,
+      currentTitle: () => null,
+      currentArtist: () => null,
+      errorMessage: null,
     ));
   }
 
@@ -411,21 +415,25 @@ class QuizEngine {
     );
   }
 
-  /// Announces a track via TTS with optional audio ducking.
+  /// Announces a track via TTS with optional audio ducking or pausing.
   ///
   /// When [isInterval] is true, this is a periodic interval announcement.
-  /// Ducking is applied based on [DuckMode]: always for [DuckMode.all],
-  /// only for non-interval announcements for [DuckMode.firstLast],
-  /// and never for [DuckMode.off].
+  /// For [DuckMode.all]: duck via AudioFocus on every announcement.
+  /// For [DuckMode.firstLast]: duck only on non-interval announcements.
+  /// For [DuckMode.pause]: pause music and boost volume on every announcement.
+  /// For [DuckMode.off]: play TTS over music with no changes.
   Future<void> _announce(String title, String artist, {bool isInterval = false}) async {
     final prevStatus = _state.status;
     _updateState(_state.copyWith(status: QuizStatus.announcing));
 
     final shouldDuck = _state.duckMode == DuckMode.all ||
         (_state.duckMode == DuckMode.firstLast && !isInterval);
+    final shouldPause = _state.duckMode == DuckMode.pause;
 
     if (shouldDuck) await _mediaControl.duckAudio();
+    if (shouldPause) await _mediaControl.pauseForTts();
     await _ttsService.announceTrack(title, artist);
+    if (shouldPause) await _mediaControl.resumeAfterTts();
     if (shouldDuck) await _mediaControl.restoreAudio();
 
     _updateState(_state.copyWith(

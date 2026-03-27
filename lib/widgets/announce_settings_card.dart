@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 
 /// Widget that provides controls for announcement timing and duck mode settings.
-class AnnounceSettingsCard extends StatefulWidget {
+class AnnounceSettingsCard extends StatelessWidget {
   final AnnounceTiming timing;
   final int intervalSeconds;
   final DuckMode duckMode;
@@ -19,34 +19,6 @@ class AnnounceSettingsCard extends StatefulWidget {
     required this.onIntervalChanged,
     required this.onDuckModeChanged,
   });
-
-  @override
-  State<AnnounceSettingsCard> createState() => _AnnounceSettingsCardState();
-}
-
-class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
-  late TextEditingController _intervalController;
-
-  @override
-  void initState() {
-    super.initState();
-    _intervalController =
-        TextEditingController(text: '${widget.intervalSeconds}');
-  }
-
-  @override
-  void didUpdateWidget(AnnounceSettingsCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.intervalSeconds != widget.intervalSeconds) {
-      _intervalController.text = '${widget.intervalSeconds}';
-    }
-  }
-
-  @override
-  void dispose() {
-    _intervalController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +59,8 @@ class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
                   icon: Icon(Icons.repeat, size: 18),
                 ),
               ],
-              selected: {widget.timing},
-              onSelectionChanged: (set) => widget.onTimingChanged(set.first),
+              selected: {timing},
+              onSelectionChanged: (set) => onTimingChanged(set.first),
               showSelectedIcon: false,
               style: ButtonStyle(
                 visualDensity: VisualDensity.compact,
@@ -97,7 +69,7 @@ class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
                 ),
               ),
             ),
-            if (widget.timing == AnnounceTiming.interval) ...[
+            if (timing == AnnounceTiming.interval) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -106,24 +78,36 @@ class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(width: 8),
+                  IconButton.outlined(
+                    icon: const Icon(Icons.remove, size: 18),
+                    onPressed: intervalSeconds > 5
+                        ? () => onIntervalChanged(intervalSeconds - 5)
+                        : null,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                  ),
                   SizedBox(
-                    width: 64,
-                    child: TextField(
-                      controller: _intervalController,
-                      keyboardType: TextInputType.number,
+                    width: 40,
+                    child: Text(
+                      '$intervalSeconds',
                       textAlign: TextAlign.center,
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        border: OutlineInputBorder(),
-                      ),
-                      onSubmitted: (value) {
-                        final parsed = int.tryParse(value);
-                        if (parsed != null && parsed >= 1 && parsed <= 60) {
-                          widget.onIntervalChanged(parsed);
-                        }
-                      },
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  IconButton.outlined(
+                    icon: const Icon(Icons.add, size: 18),
+                    onPressed: intervalSeconds < 60
+                        ? () => onIntervalChanged(intervalSeconds + 5)
+                        : null,
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -143,7 +127,7 @@ class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Lower music volume during announcements',
+              'Lower or pause music during announcements',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -164,9 +148,14 @@ class _AnnounceSettingsCardState extends State<AnnounceSettingsCard> {
                   label: Text('All'),
                   icon: Icon(Icons.volume_mute, size: 18),
                 ),
+                ButtonSegment(
+                  value: DuckMode.pause,
+                  label: Text('Pause'),
+                  icon: Icon(Icons.pause_circle_outline, size: 18),
+                ),
               ],
-              selected: {widget.duckMode},
-              onSelectionChanged: (set) => widget.onDuckModeChanged(set.first),
+              selected: {duckMode},
+              onSelectionChanged: (set) => onDuckModeChanged(set.first),
               showSelectedIcon: false,
               style: ButtonStyle(
                 visualDensity: VisualDensity.compact,

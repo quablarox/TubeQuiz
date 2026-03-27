@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-/// Represents metadata of the currently playing track in YouTube Music.
+/// Represents metadata of the currently playing track from a supported music app.
 class MediaTrackInfo {
   final String title;
   final String artist;
@@ -34,7 +34,8 @@ class MediaTrackInfo {
 }
 
 /// Service that communicates with the native Android platform
-/// to control YouTube Music playback via MediaSession API.
+/// to control music playback via MediaSession API.
+/// Supports YouTube Music, Amazon Music, and other compatible players.
 class MediaControlService {
   static const _methodChannel = MethodChannel('com.tubequiz.app/media_control');
   static const _eventChannel = EventChannel('com.tubequiz.app/media_events');
@@ -60,7 +61,7 @@ class MediaControlService {
     }
   }
 
-  /// Gets the currently playing track info from YouTube Music.
+  /// Gets the currently playing track info from a supported music app.
   Future<MediaTrackInfo?> getCurrentTrack() async {
     try {
       final result = await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
@@ -109,7 +110,7 @@ class MediaControlService {
     }
   }
 
-  /// Lowers the music stream volume so TTS is louder than music.
+  /// Requests AudioFocus so the music app lowers its own output during TTS.
   Future<void> duckAudio() async {
     try {
       await _methodChannel.invokeMethod('duckAudio');
@@ -118,12 +119,30 @@ class MediaControlService {
     }
   }
 
-  /// Restores the music stream volume to the level before ducking.
+  /// Abandons AudioFocus so the music app restores its output level.
   Future<void> restoreAudio() async {
     try {
       await _methodChannel.invokeMethod('restoreAudio');
     } on PlatformException {
       // Restore failed
+    }
+  }
+
+  /// Pauses music and boosts STREAM_MUSIC to max for louder TTS.
+  Future<void> pauseForTts() async {
+    try {
+      await _methodChannel.invokeMethod('pauseForTts');
+    } on PlatformException {
+      // Pause for TTS failed
+    }
+  }
+
+  /// Restores STREAM_MUSIC volume and resumes music after TTS.
+  Future<void> resumeAfterTts() async {
+    try {
+      await _methodChannel.invokeMethod('resumeAfterTts');
+    } on PlatformException {
+      // Resume after TTS failed
     }
   }
 

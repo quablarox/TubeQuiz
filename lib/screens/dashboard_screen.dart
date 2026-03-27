@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/quiz_provider.dart';
 import '../widgets/widgets.dart';
 
@@ -16,14 +17,26 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver {
+  String _version = '';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadVersion();
     // Check notification listener status on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<QuizProvider>().checkNotificationListener();
     });
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _version = 'TubeQuiz v${info.version} (build ${info.buildNumber})';
+      });
+    }
   }
 
   @override
@@ -111,6 +124,20 @@ class _DashboardScreenState extends State<DashboardScreen>
                   onImport: () => _importPlaylist(context, provider),
                   onClear: () => provider.clearPlaylist(),
                 ),
+
+                const SizedBox(height: 24),
+
+                // Version footer
+                Center(
+                  child: Text(
+                    _version,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
               ],
             ),
           );
@@ -124,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       padding: const EdgeInsets.only(bottom: 16.0),
       child: MaterialBanner(
         content: const Text(
-          'Notification listener permission is required to read YouTube Music playback.',
+          'Notification listener permission is required to read music playback.',
         ),
         leading: const Icon(Icons.warning_amber, color: Colors.orange),
         actions: [
@@ -178,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 4),
                     Text(
                       isRunning
-                          ? 'Monitoring YouTube Music...'
+                          ? 'Monitoring music playback...'
                           : provider.isNotificationListenerEnabled
                               ? 'Tap to start tracking songs'
                               : 'Grant notification access first',
