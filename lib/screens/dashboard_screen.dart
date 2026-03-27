@@ -205,9 +205,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     const SizedBox(height: 4),
                     Text(
                       isRunning
-                          ? 'Monitoring music playback...'
+                          ? 'Monitoring music playback and announcing tracks'
                           : provider.isNotificationListenerEnabled
-                              ? 'Tap to start tracking songs'
+                              ? 'Tap to start — announces every new track'
                               : 'Grant notification access first',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -260,7 +260,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Text(
                     isQuiz
                         ? 'Controls playback with snippets & playlist'
-                        : 'Enable to control playback',
+                        : 'Enable to control playback • saved automatically',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

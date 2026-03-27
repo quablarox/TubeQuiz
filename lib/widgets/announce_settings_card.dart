@@ -29,11 +29,23 @@ class AnnounceSettingsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Announcement',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Announcement',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                Text(
+                  'Applied to next track',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontStyle: FontStyle.italic,
+                      ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             SegmentedButton<AnnounceTiming>(
@@ -127,7 +139,7 @@ class AnnounceSettingsCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Lower or pause music during announcements',
+              'Lower or pause music during announcements • saved automatically',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
