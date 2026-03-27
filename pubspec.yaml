@@ -1,5 +1,8 @@
 name: tube_quiz
-description: Music Quiz Master - A companion app for YouTube Music that creates automated "Guess the Song" quiz experiences.
+description: >-
+  Music Quiz Master – A companion app for YouTube Music and Amazon Music that
+  monitors playback, announces tracks via TTS, and runs automated
+  "Guess the Song" snippet quizzes.
 publish_to: 'none'
 version: 1.0.0+1
 

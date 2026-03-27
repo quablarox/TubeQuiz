@@ -6,6 +6,70 @@ class TtsService {
   FlutterTts? _flutterTts;
   bool _isInitialized = false;
 
+  /// Words that commonly appear in brackets but are not part of the song title.
+  /// When found inside parentheses or square brackets, the entire bracket
+  /// group is removed before the title is read aloud.
+  static const _bracketNoiseWords = [
+    'explicit',
+    'remix',
+    'remixed',
+    'remaster',
+    'remastered',
+    'live',
+    'feat',
+    'ft',
+    'featuring',
+    'acoustic',
+    'deluxe',
+    'bonus',
+    'bonus track',
+    'version',
+    'edit',
+    'radio',
+    'radio edit',
+    'demo',
+    'mono',
+    'stereo',
+    'single',
+    'album',
+    'official',
+    'official video',
+    'official audio',
+    'official music video',
+    'video',
+    'audio',
+    'lyrics',
+    'lyric',
+    'lyric video',
+    'visualizer',
+    'visualiser',
+    'clean',
+    'dirty',
+    'extended',
+    'instrumental',
+    'original',
+    'original mix',
+    'club mix',
+    'dub mix',
+    'sped up',
+    'slowed',
+    'reverb',
+    'nightcore',
+  ];
+
+  /// Pre-compiled pattern that matches bracket groups containing noise words.
+  static final RegExp _noisePattern = _buildNoisePattern();
+
+  static RegExp _buildNoisePattern() {
+    final escaped =
+        _bracketNoiseWords.map((w) => RegExp.escape(w)).join('|');
+    // Match (...) or [...] whose content contains at least one noise word
+    return RegExp(
+      r'[\(\[]((?:[^\)\]])*?\b(?:' + escaped + r')\b[^\)\]]*?)[\)\]]',
+      caseSensitive: false,
+    );
+  }
+
   /// Initializes the TTS engine.
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -18,11 +82,23 @@ class TtsService {
     _isInitialized = true;
   }
 
+  /// Removes bracketed noise from a title for cleaner TTS output.
+  ///
+  /// Strips content inside `()` or `[]` when it contains typical non-title
+  /// words such as "Explicit", "Remix", "Live", "feat.", etc.
+  static String cleanTitleForSpeech(String title) {
+    return title
+        .replaceAll(_noisePattern, '')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
+  }
+
   /// Announces the upcoming track via TTS.
   /// Returns a Future that completes when the announcement is finished.
   Future<void> announceTrack(String title, String artist) async {
     await initialize();
-    final text = '$title by $artist';
+    final cleanTitle = cleanTitleForSpeech(title);
+    final text = '$cleanTitle by $artist';
     await _speak(text);
   }
 
