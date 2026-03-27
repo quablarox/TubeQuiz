@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Audio ducking mode setting: off, first/last only, or all announcements
+- Audio ducking mode setting: off, first/last only, all announcements, or pause
+- TTS read-aloud filter: strips bracket noise (Explicit, Remix, Live, feat., Remastered, Official Video, etc.) from titles before announcing
+- UX hints in settings cards showing when changes take effect ("Applied to next track", "saved automatically")
+- Custom app icon (indigo background with play-button, question mark, and music note)
+- Debug build uses `.debug` application-ID suffix to prevent conflicting-installation errors when switching between debug and release builds
 - Release signing configuration for consistent APK updates
 - Versioned CI build artifacts (APK names include version number)
 - Pull request template enforcing structured commit messages
@@ -16,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - TTS announcement text simplified from "Next song: X by Y" to "X by Y"
+- Service toggle description clarified ("announces every new track")
+- Product descriptions updated (README, architecture docs)
 
 ## [1.0.0] - 2026-03-26
 
